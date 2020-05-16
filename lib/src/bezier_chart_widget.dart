@@ -26,7 +26,7 @@ class BezierChart extends StatefulWidget {
 
   ///This value is required only if the `BezierChartScale` is `BezierChartScale.CUSTOM`
   ///and these values must be sorted in increasing way (These will be showed in the Axis X).
-  final List<double> xAxisCustomValues;
+  final List<Comparable> xAxisCustomValues;
 
   ///[Optional] This callback only works if the `BezierChartScale` is `BezierChartScale.CUSTOM` otherwise it will be ignored
   ///This is used to display a custom footer value based on the current 'x' value
@@ -49,7 +49,7 @@ class BezierChart extends StatefulWidget {
 
   ///[Optional] This callback will display the current `double` value selected by the indicator
   ///Only works when the `BezierChartScale` is not `BezierChartScale.CUSTOM`
-  final ValueChanged<double> onValueSelected;
+  final ValueChanged<Comparable> onValueSelected;
 
   ///[Optional] This callback will display the current `DateTime` selected by the indicator
   ///Only works when the `BezierChartScale` is date type
@@ -70,7 +70,7 @@ class BezierChart extends StatefulWidget {
 
   ///This value represents the value selected to display the info in the Chart
   ///It's only for `BezierChartScale.CUSTOM`
-  final double selectedValue;
+  final Comparable selectedValue;
 
   ///Beziers used in the Axis Y
   final List<BezierLine> series;
@@ -288,9 +288,13 @@ class BezierChartState extends State<BezierChart>
     _tempYValues = [];
     final scale = _currentBezierChartScale;
     if (scale == BezierChartScale.CUSTOM) {
-      _xAxisDataPoints = widget.xAxisCustomValues
-          .map((val) => DataPoint<double>(value: val, xAxis: val))
-          .toList();
+      // _xAxisDataPoints = widget.xAxisCustomValues
+      //     .map((val) => DataPoint<Comparable>(value: val, xAxis: val))
+      //     .toList();
+
+      widget.xAxisCustomValues.asMap().forEach((index, value) =>
+          _xAxisDataPoints.add(
+              DataPoint<Comparable>(value: index.toDouble(), xAxis: value)));
     } else if (scale == BezierChartScale.HOURLY) {
       final hours = widget.toDate.difference(widget.fromDate).inHours;
       for (int i = 0; i < hours; i++) {
@@ -1022,7 +1026,7 @@ class _BezierChartPainter extends CustomPainter {
   final FooterDateTimeBuilder bubbleLabelDateTimeBuilder;
   final double maxYValue;
   final double minYValue;
-  final ValueChanged<double> onValueSelected;
+  final ValueChanged<Comparable> onValueSelected;
   final ValueChanged<DateTime> onDateTimeSelected;
   final bool shouldRepaintChart;
 
@@ -1151,6 +1155,11 @@ class _BezierChartPainter extends CustomPainter {
         bool isMissingValue = false;
         if (bezierChartScale == BezierChartScale.CUSTOM) {
           value = line.data[i].value;
+
+          // 強引ではあるが、valueが0でmissingValue扱いをして非表示処理をする
+          if (value == 0) {
+            isMissingValue = true;
+          }
         } else {
           //search from axis
           for (DataPoint<DateTime> dp in line.data) {
@@ -1198,14 +1207,21 @@ class _BezierChartPainter extends CustomPainter {
         }
 
         final double controlPointX = lastPoint.x + (valueX - lastPoint.x) / 2;
-        path.cubicTo(
-            controlPointX, lastPoint.y, controlPointX, valueY, valueX, valueY);
+        // path.cubicTo(
+        //     controlPointX, lastPoint.y, controlPointX, valueY, valueX, valueY);
+        bool isAddDataPoints = false;
         if (isMissingValue) {
           if (config.displayDataPointWhenNoValue) {
             dataPoints.add(Offset(valueX, valueY));
+            isAddDataPoints = true;
           }
         } else {
           dataPoints.add(Offset(valueX, valueY));
+          isAddDataPoints = true;
+        }
+        if (isAddDataPoints) {
+          path.cubicTo(controlPointX, lastPoint.y, controlPointX, valueY,
+              valueX, valueY);
         }
 
         if (verticalIndicatorPosition != null &&
@@ -1524,7 +1540,7 @@ class _BezierChartPainter extends CustomPainter {
           _currentXDataPoint.xAxis as DateTime, scale);
     }
     if (scale == BezierChartScale.CUSTOM) {
-      return "${formatAsIntOrDouble(_currentXDataPoint.value)}\n";
+      return "${formatAsComparable(_currentXDataPoint.xAxis, config)}\n";
     } else if (scale == BezierChartScale.HOURLY) {
       final dateFormat = intl.DateFormat('dd/MM HH:mm');
       final date = _currentXDataPoint.xAxis as DateTime;
@@ -1574,7 +1590,7 @@ class _BezierChartPainter extends CustomPainter {
       return footerDateTimeBuilder(dataPoint.xAxis as DateTime, scale);
     }
     if (scale == BezierChartScale.CUSTOM) {
-      return "${formatAsIntOrDouble(dataPoint.value)}\n";
+      return "${formatAsComparable(dataPoint.xAxis, config)}\n";
     } else if (scale == BezierChartScale.HOURLY) {
       final dateFormat = intl.DateFormat('HH:mm\n');
       return "${dateFormat.format(dataPoint.xAxis as DateTime)}";
@@ -1653,12 +1669,13 @@ bool _compareLengths(int currentValue, List<BezierLine> val2) {
   return true;
 }
 
-bool _isSorted<T>(List<double> list, [int Function(double, double) compare]) {
+bool _isSorted<T>(List<Comparable> list,
+    [int Function(Comparable, Comparable) compare]) {
   if (list.length < 2) return true;
-  compare ??= (double a, double b) => a.compareTo(b);
-  double prev = list.first;
+  compare ??= (Comparable a, Comparable b) => a.compareTo(b);
+  Comparable prev = list.first;
   for (var i = 1; i < list.length; i++) {
-    double next = list[i];
+    Comparable next = list[i];
     if (compare(prev, next) > 0) return false;
     prev = next;
   }
@@ -1674,9 +1691,9 @@ bool _checkCustomValues(List<BezierLine> list) {
   return true;
 }
 
-bool _areAllPositive(Iterable<double> list) {
-  for (double val in list) {
-    if (val < 0) return false;
+bool _areAllPositive(Iterable<Comparable> list) {
+  for (Comparable val in list) {
+    if (val is num && val < 0) return false;
   }
   return true;
 }
@@ -1691,6 +1708,17 @@ String formatAsIntOrDouble(double str) {
     }
   }
   return str.toString();
+}
+
+String formatAsComparable(Comparable v, BezierChartConfig config) {
+  if (v is num) {
+    return formatAsIntOrDouble(v);
+  }
+  if (v is DateTime && config.xAxisDateFormat != null) {
+    final dateFormat = intl.DateFormat(config.xAxisDateFormat, config.locale);
+    return dateFormat.format(v);
+  }
+  return v.toString();
 }
 
 class _CustomValue {

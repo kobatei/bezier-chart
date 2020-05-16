@@ -105,6 +105,10 @@ class BezierChartConfig {
   ///`true` if you want do update bubble info on tap action instead of long press. This option will disable tap to hide bubble action
   final bool updatePositionOnTap;
 
+  final String xAxisDateFormat;
+
+  final String locale;
+
   BezierChartConfig({
     this.verticalIndicatorStrokeWidth = 2.0,
     this.verticalIndicatorColor = Colors.black,
@@ -144,6 +148,8 @@ class BezierChartConfig {
     this.bubbleIndicatorValueFormat,
     this.physics = const AlwaysScrollableScrollPhysics(),
     this.updatePositionOnTap = false,
+    this.xAxisDateFormat,
+    this.locale,
     bool verticalLineFullHeight,
   }) : this.verticalLineFullHeight =
             verticalLineFullHeight ?? verticalIndicatorFixedPosition;
