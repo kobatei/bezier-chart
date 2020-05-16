@@ -44,18 +44,18 @@ void main() {
         child: BezierChart(
           bezierChartScale: BezierChartScale.CUSTOM,
           xAxisCustomValues: const [
-            0,
-            5,
-            10,
-            15,
+            0.0,
+            5.0,
+            10.0,
+            15.0,
           ],
           series: const [
             BezierLine(
               data: const [
-                DataPoint<double>(value: 10, xAxis: 0),
-                DataPoint<double>(value: 130, xAxis: 5),
-                DataPoint<double>(value: 50, xAxis: 10),
-                DataPoint<double>(value: 150, xAxis: 15),
+                DataPoint<double>(value: 10, xAxis: 0.0),
+                DataPoint<double>(value: 130, xAxis: 5.0),
+                DataPoint<double>(value: 50, xAxis: 10.0),
+                DataPoint<double>(value: 150, xAxis: 15.0),
               ],
             ),
           ],
